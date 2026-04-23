@@ -12,16 +12,30 @@ public class PlayerScript : MonoBehaviour
      *  - left and right move speed
      *  - dash speed
      */
+
+    private int _playerDirection = 0;
+    private bool _pressedSpaceKey = false;
     
     // The constant speed a player move when accelerated to that speed
-    [SerializeField] private float constantSpeed = 8f;
+    [SerializeField] private float constantSpeed;
 
     // The acceleration overtime to the const speed
-    [SerializeField] private float accelerationFactor = 15f;
-    [SerializeField] private float accelerationSpeed = 1f;
+    [SerializeField] private float accelerationFactor;
+    [SerializeField] private float accelerationSpeed;
     
     // The deacceleration overtime until the player completely stops
-    [SerializeField] private float dampingForce = 5f;
+    [SerializeField] private float dampingForce;
+    
+    // Dashing
+    //      - when the player dashes it starts a timer for the dash duration
+    //      - after the dash duration finishes the timer for the cooldown is started
+    //      - every timer is subtracted by Time.deltaTime
+    [SerializeField] private float dashSpeed;
+    [SerializeField] private float dashDuration;
+    private float _dashTime;
+
+    [SerializeField] private float dashCooldown;
+    private float _dashCooldownTime;
     
     public bool isTouchingLeftWall = false;
     public bool isTouchingRightWall = false;
@@ -29,7 +43,7 @@ public class PlayerScript : MonoBehaviour
     // ----------- Variables for horizontal movement ----------- //
     
     [SerializeField] private float jumpForce = 8f;
-    private bool _isInAir = false;
+    private bool _isInAir = true;
     
     private void Awake()
     {
@@ -43,51 +57,77 @@ public class PlayerScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        VerticalMovement();
-        HorizontalMovement();
+        KeyDetection();
+        VerticalLinearVelocity();
+        HorizontalLinearVelocity();
+        
+        // Dash and Cool Down
+        _dashTime -= Time.deltaTime;
+        _dashCooldownTime -= Time.deltaTime;
     }
 
-    void VerticalMovement()
+    void KeyDetection()
     {
-        // ----------- Accelerating the player ----------- //
-
         if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
         {
+            _playerDirection = 0;
             _rigidBody2D.linearDamping = 0;
             isTouchingLeftWall = isTouchingRightWall = false;
         }
 
-        // Moving the player right
-        if (Keyboard.current.dKey.isPressed && !isTouchingRightWall)
-        {
-            if (accelerationSpeed < constantSpeed)
-            {
-                accelerationSpeed += accelerationFactor * Time.deltaTime;
-                _rigidBody2D.linearVelocity = new Vector2(accelerationSpeed, _rigidBody2D.linearVelocityY);
-            }
-            else
-            {
-                _rigidBody2D.linearVelocity = new Vector2(constantSpeed, _rigidBody2D.linearVelocityY);
-            }
-        }
-        
-        // Moving the player left
+        if (Keyboard.current.dKey.wasReleasedThisFrame || Keyboard.current.aKey.wasReleasedThisFrame)
+            _playerDirection = 0;
+
         if (Keyboard.current.aKey.isPressed && !isTouchingLeftWall)
+            _playerDirection = -1;
+        
+        if (Keyboard.current.dKey.isPressed && !isTouchingRightWall)
+            _playerDirection = 1;
+
+        if (Keyboard.current.shiftKey.wasPressedThisFrame)
+            DashAbility();
+
+        if (Keyboard.current.spaceKey.wasPressedThisFrame && !_isInAir)
+            _pressedSpaceKey = true;
+    }
+
+    void DashAbility()
+    {
+        if (_dashCooldownTime < 0)
         {
-            if (accelerationSpeed < constantSpeed)
+            _dashCooldownTime = dashCooldown;
+            _dashTime = dashDuration;
+        }
+    }
+
+    void VerticalLinearVelocity()
+    {
+        // ----------- Accelerating the player ----------- //
+
+        // Moving the player left or right
+        if (_playerDirection != 0)
+        {
+            if (_dashTime > 0)
             {
-                // 10 -> accelerationFactor
-                accelerationSpeed += accelerationFactor * Time.deltaTime;
-                _rigidBody2D.linearVelocity = new Vector2(-accelerationSpeed, _rigidBody2D.linearVelocityY);
+                _rigidBody2D.linearVelocity = new Vector2(dashSpeed * _playerDirection * 2f, 0);
             }
             else
             {
-                _rigidBody2D.linearVelocity = new Vector2(-constantSpeed, _rigidBody2D.linearVelocityY);
+                if (accelerationSpeed < constantSpeed)
+                {
+                    accelerationSpeed += accelerationFactor * Time.deltaTime;
+                    _rigidBody2D.linearVelocity = new Vector2(accelerationSpeed * _playerDirection, _rigidBody2D.linearVelocityY);
+                }
+                else
+                {
+                    _rigidBody2D.linearVelocity = new Vector2(constantSpeed * _playerDirection, _rigidBody2D.linearVelocityY);
+                }
             }
         }
         
         // ----------- Decelerating the player ----------- //
-        if (!_isInAir && (Keyboard.current.dKey.wasReleasedThisFrame || Keyboard.current.aKey.wasReleasedThisFrame))
+        
+        if (!_isInAir && _playerDirection != 0)
         {
             _rigidBody2D.linearDamping = dampingForce;
         }
@@ -97,14 +137,13 @@ public class PlayerScript : MonoBehaviour
             accelerationSpeed = 1f;
     }
 
-    void HorizontalMovement()
+    void HorizontalLinearVelocity()
     {
-        // Used _rigidBody.linearVelocityY == 0f in this check but after adding more to the level (higher platform) the players linear velocity
-        // went crazy. Do not know why so using _IsInAir is a quick fix (maybe a better fix)
-        if (Keyboard.current.spaceKey.wasPressedThisFrame && !_isInAir)
+        if (_pressedSpaceKey)
         {
             _rigidBody2D.linearDamping = 0;
             _rigidBody2D.linearVelocity = new Vector2(_rigidBody2D.linearVelocityX, jumpForce);
+            _pressedSpaceKey = false;
         }
     }
 
@@ -112,7 +151,6 @@ public class PlayerScript : MonoBehaviour
     {
         if (collision.gameObject.layer == 3)
         {
-            Debug.Log("The player is on the ground!");
             _isInAir = false;
             _rigidBody2D.linearDamping = dampingForce;
         }
@@ -133,7 +171,6 @@ public class PlayerScript : MonoBehaviour
     {
         if (collision.gameObject.layer == 3)
         {
-            Debug.Log("The player is in the air!");
             _isInAir = true;
             _rigidBody2D.linearDamping = 0;
         }
