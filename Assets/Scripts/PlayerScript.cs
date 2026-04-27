@@ -1,24 +1,25 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Vector2 = UnityEngine.Vector2;
 
 public class PlayerScript : MonoBehaviour
 {
+    private static readonly int Speed = Animator.StringToHash("Speed");
+    private static readonly int IsDashing = Animator.StringToHash("IsDashing");
+    private static readonly int IsJumping = Animator.StringToHash("IsJumping");
+    private static readonly int IsFalling = Animator.StringToHash("IsFalling");
+
     // Player components
     private Rigidbody2D _rigidBody2D;
+    public Animator animator;
     
-    /*
-     *  ----------- Variables for vertical movement ----------- *
-     *  - left and right move speed
-     *  - dash speed
-     */
-
-    private int _playerDirection = 0;
-    private bool _pressedSpaceKey = false;
+    // Player movement variables
+    private int _playerDirection = 1;
     
-    // The constant speed a player move when accelerated to that speed
+    // The constant speed a player moves when accelerated to that speed
     [SerializeField] private float constantSpeed;
-
+    
     // The acceleration overtime to the const speed
     [SerializeField] private float accelerationFactor;
     [SerializeField] private float accelerationSpeed;
@@ -30,20 +31,22 @@ public class PlayerScript : MonoBehaviour
     //      - when the player dashes it starts a timer for the dash duration
     //      - after the dash duration finishes the timer for the cooldown is started
     //      - every timer is subtracted by Time.deltaTime
+    private bool _isDashing = false;
+    private int _dashDirection = 0;
+    private float _dashTime;
+    private float _dashCooldownTime;
     [SerializeField] private float dashSpeed;
     [SerializeField] private float dashDuration;
-    private float _dashTime;
-
+    [SerializeField] private float dashJump;
     [SerializeField] private float dashCooldown;
-    private float _dashCooldownTime;
+
+    [SerializeField] private float jumpForce = 8f;
+    private bool _jumped = false;
+    private bool _isInAir = true;
     
+    // Player collision variables
     public bool isTouchingLeftWall = false;
     public bool isTouchingRightWall = false;
-    
-    // ----------- Variables for horizontal movement ----------- //
-    
-    [SerializeField] private float jumpForce = 8f;
-    private bool _isInAir = true;
     
     private void Awake()
     {
@@ -57,38 +60,49 @@ public class PlayerScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        KeyDetection();
-        VerticalLinearVelocity();
-        HorizontalLinearVelocity();
+        InputDetection();
+        AnimationPlayer();
         
         // Dash and Cool Down
         _dashTime -= Time.deltaTime;
         _dashCooldownTime -= Time.deltaTime;
     }
 
-    void KeyDetection()
+    void InputDetection()
     {
         if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
         {
-            _playerDirection = 0;
             _rigidBody2D.linearDamping = 0;
-            isTouchingLeftWall = isTouchingRightWall = false;
+            if (_dashTime > 0)
+                _rigidBody2D.gravityScale = 0;
+            else
+                _rigidBody2D.gravityScale = 2;
         }
 
-        if (Keyboard.current.dKey.wasReleasedThisFrame || Keyboard.current.aKey.wasReleasedThisFrame)
-            _playerDirection = 0;
-
-        if (Keyboard.current.aKey.isPressed && !isTouchingLeftWall)
+        if (Keyboard.current.aKey.isPressed)
+        {
             _playerDirection = -1;
-        
-        if (Keyboard.current.dKey.isPressed && !isTouchingRightWall)
+            PlayerAngle();
+            VerticalMovement();
+        }
+
+        if (Keyboard.current.dKey.isPressed)
+        {
             _playerDirection = 1;
+            PlayerAngle();
+            VerticalMovement();
+        }
 
         if (Keyboard.current.shiftKey.wasPressedThisFrame)
+        {
             DashAbility();
+            VerticalMovement();
+        }
 
         if (Keyboard.current.spaceKey.wasPressedThisFrame && !_isInAir)
-            _pressedSpaceKey = true;
+        {
+            HorizontalMovement();
+        }
     }
 
     void DashAbility()
@@ -100,31 +114,35 @@ public class PlayerScript : MonoBehaviour
         }
     }
 
-    void VerticalLinearVelocity()
+    void PlayerAngle()
+    {
+        if (_playerDirection == -1)
+            _rigidBody2D.transform.eulerAngles = new Vector3(0, 180, 0);
+        else if (_playerDirection == 1)
+            _rigidBody2D.transform.eulerAngles = new Vector3(0, 0, 0);
+    }
+
+    void VerticalMovement()
     {
         // ----------- Accelerating the player ----------- //
 
-        // Moving the player left or right
-        if (_playerDirection != 0)
+        if (_dashTime > 0)
         {
-            if (_dashTime > 0)
+            _rigidBody2D.linearVelocity = new Vector2(dashSpeed * _playerDirection, 0);
+        }
+        else
+        {
+            if (accelerationSpeed < constantSpeed)
             {
-                _rigidBody2D.linearVelocity = new Vector2(dashSpeed * _playerDirection * 2f, 0);
+                accelerationSpeed += accelerationFactor * Time.deltaTime;
+                _rigidBody2D.linearVelocity = new Vector2(accelerationSpeed * _playerDirection, _rigidBody2D.linearVelocityY);
             }
             else
             {
-                if (accelerationSpeed < constantSpeed)
-                {
-                    accelerationSpeed += accelerationFactor * Time.deltaTime;
-                    _rigidBody2D.linearVelocity = new Vector2(accelerationSpeed * _playerDirection, _rigidBody2D.linearVelocityY);
-                }
-                else
-                {
-                    _rigidBody2D.linearVelocity = new Vector2(constantSpeed * _playerDirection, _rigidBody2D.linearVelocityY);
-                }
+                _rigidBody2D.linearVelocity = new Vector2(constantSpeed * _playerDirection, _rigidBody2D.linearVelocityY);
             }
         }
-        
+
         // ----------- Decelerating the player ----------- //
         
         if (!_isInAir && _playerDirection != 0)
@@ -137,14 +155,18 @@ public class PlayerScript : MonoBehaviour
             accelerationSpeed = 1f;
     }
 
-    void HorizontalLinearVelocity()
+    void HorizontalMovement()
     {
-        if (_pressedSpaceKey)
-        {
-            _rigidBody2D.linearDamping = 0;
-            _rigidBody2D.linearVelocity = new Vector2(_rigidBody2D.linearVelocityX, jumpForce);
-            _pressedSpaceKey = false;
-        }
+        _rigidBody2D.linearDamping = 0;
+        _rigidBody2D.linearVelocity = new Vector2(_rigidBody2D.linearVelocityX, jumpForce);
+    }
+
+    void AnimationPlayer()
+    {
+        animator.SetFloat(Speed, Mathf.Abs(_rigidBody2D.linearVelocityX));
+        animator.SetBool(IsDashing, _dashTime > 0);
+        animator.SetBool(IsJumping, _isInAir && _rigidBody2D.linearVelocityY > 0);
+        animator.SetBool(IsFalling, _isInAir && _rigidBody2D.linearVelocityY < -0.1f);
     }
 
     void OnCollisionEnter2D(Collision2D collision)
@@ -155,16 +177,16 @@ public class PlayerScript : MonoBehaviour
             _rigidBody2D.linearDamping = dampingForce;
         }
 
-        if (collision.gameObject.layer == 6)
-        {
-            if (Keyboard.current.aKey.isPressed)
-                isTouchingLeftWall = true;
-            
-            if(Keyboard.current.dKey.isPressed)
-                isTouchingRightWall = true;
-            
-            _rigidBody2D.linearVelocity = new Vector2(0, _rigidBody2D.linearVelocityY);
-        }
+        // if (collision.gameObject.layer == 6)
+        // {
+        //     if (Keyboard.current.aKey.isPressed)
+        //         isTouchingLeftWall = true;
+        //     
+        //     if(Keyboard.current.dKey.isPressed)
+        //         isTouchingRightWall = true;
+        //     
+        //     _rigidBody2D.linearVelocity = new Vector2(0, _rigidBody2D.linearVelocityY);
+        // }
     }
 
     void OnCollisionExit2D(Collision2D collision)
