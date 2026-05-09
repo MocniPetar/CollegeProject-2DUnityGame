@@ -1,4 +1,5 @@
 using System;
+using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Vector2 = UnityEngine.Vector2;
@@ -9,20 +10,29 @@ public class PlayerScript : MonoBehaviour
     private static readonly int IsDashing = Animator.StringToHash("IsDashing");
     private static readonly int IsJumping = Animator.StringToHash("IsJumping");
     private static readonly int IsFalling = Animator.StringToHash("IsFalling");
+    private static readonly int CanGrabWall = Animator.StringToHash("canGrabWall");
+    
+    // Player Animation Actions
+    public static event Action<float> PlayerRunAnimation;
+    public static event Action<bool> PlayerJumpAnimation;
+    public static event Action<bool> PlayerWallGrabAnimation;
+    public static event Action<bool> PlayerFallAnimation;
+    public static event Action<bool> PlayerDashAnimation;
 
     // Player components
     private Rigidbody2D _rigidBody2D;
+    private SpriteRenderer _spriteRenderer;
     public Animator animator;
     
     // Player movement variables
-    private int _playerDirection = 1;
+    [SerializeField] private float gravityForce;
     
     // The constant speed a player moves when accelerated to that speed
     [SerializeField] private float constantSpeed;
     
     // The acceleration overtime to the const speed
     [SerializeField] private float accelerationFactor;
-    [SerializeField] private float accelerationSpeed;
+    // [SerializeField] private float accelerationSpeed;
     
     // The deacceleration overtime until the player completely stops
     [SerializeField] private float dampingForce;
@@ -31,8 +41,6 @@ public class PlayerScript : MonoBehaviour
     //      - when the player dashes it starts a timer for the dash duration
     //      - after the dash duration finishes the timer for the cooldown is started
     //      - every timer is subtracted by Time.deltaTime
-    private bool _isDashing = false;
-    private int _dashDirection = 0;
     private float _dashTime;
     private float _dashCooldownTime;
     [SerializeField] private float dashSpeed;
@@ -40,160 +48,178 @@ public class PlayerScript : MonoBehaviour
     [SerializeField] private float dashJump;
     [SerializeField] private float dashCooldown;
 
-    [SerializeField] private float jumpForce = 8f;
-    private bool _jumped = false;
-    private bool _isInAir = true;
+    [SerializeField] private float jumpForce;
+    private bool _canJumpFromWall = false;
+    private bool _isGrabbingTheWall = false;
     
-    // Player collision variables
-    public bool isTouchingLeftWall = false;
-    public bool isTouchingRightWall = false;
+    // Player information
+    private float _playerHalfHight = 0;
+    private float _playerHalfWidth = 0;
     
     private void Awake()
     {
         _rigidBody2D = GetComponent<Rigidbody2D>();
+        _spriteRenderer = GetComponent<SpriteRenderer>();
+            
         if (_rigidBody2D == null)
         {
             Debug.LogError("RigidBody2D missing on Player!");
         }
+
+        if (_spriteRenderer == null)
+        {
+            Debug.LogError("SpriteRenderer missing on Player!");
+        }
+        
+        _playerHalfHight = _spriteRenderer.bounds.size.y / 2;
+        _playerHalfWidth =  _spriteRenderer.bounds.size.x / 2;
+    }
+
+    private void OnEnable()
+    {
+        MovementControllerScript.OnPlayerHoldingWall += HandlePlayerReleasingTheWall;
+        MovementControllerScript.OnPlayerMoveRight += HandlePlayerRightMovement;
+        MovementControllerScript.OnPlayerMoveLeft += HandlePlayerLeftMovement;
+        MovementControllerScript.OnPlayerJump += HandlePlayerJump;
+        MovementControllerScript.OnPlayerDash += HandlePlayerDash;
+        MovementControllerScript.OnPlayerStartMoving += HandleStartPlayerMovement;
+        MovementControllerScript.OnPlayerStopMoving += HandleStopPlayerMovement;
+    }
+
+    private void OnDisable()
+    {
+        MovementControllerScript.OnPlayerHoldingWall -= HandlePlayerReleasingTheWall;
+        MovementControllerScript.OnPlayerMoveRight -= HandlePlayerRightMovement;
+        MovementControllerScript.OnPlayerMoveLeft -= HandlePlayerLeftMovement;
+        MovementControllerScript.OnPlayerJump -= HandlePlayerJump;
+        MovementControllerScript.OnPlayerDash -= HandlePlayerDash;
+        MovementControllerScript.OnPlayerStartMoving -= HandleStartPlayerMovement;
+        MovementControllerScript.OnPlayerStopMoving -= HandleStopPlayerMovement;
     }
 
     // Update is called once per frame
     void Update()
     {
-        InputDetection();
-        AnimationPlayer();
+        Debug.DrawRay(transform.position, Vector2.left * (_playerHalfWidth - .1f), Color.red);
+        Debug.DrawRay(transform.position, Vector2.right * (_playerHalfWidth - .1f), Color.blue);
+        Debug.DrawRay(transform.position, Vector2.down * (_playerHalfHight + .1f), Color.green);
+        
+        PlayerAnimationController();
         
         // Dash and Cool Down
         _dashTime -= Time.deltaTime;
         _dashCooldownTime -= Time.deltaTime;
     }
 
-    void InputDetection()
+    void HandlePlayerReleasingTheWall()
     {
-        if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
-        {
-            _rigidBody2D.linearDamping = 0;
-            if (_dashTime > 0)
-                _rigidBody2D.gravityScale = 0;
-            else
-                _rigidBody2D.gravityScale = 2;
-        }
-
-        if (Keyboard.current.aKey.isPressed)
-        {
-            _playerDirection = -1;
-            PlayerAngle();
-            VerticalMovement();
-        }
-
-        if (Keyboard.current.dKey.isPressed)
-        {
-            _playerDirection = 1;
-            PlayerAngle();
-            VerticalMovement();
-        }
-
-        if (Keyboard.current.shiftKey.wasPressedThisFrame)
-        {
-            DashAbility();
-            VerticalMovement();
-        }
-
-        if (Keyboard.current.spaceKey.wasPressedThisFrame && !_isInAir)
-        {
-            HorizontalMovement();
-        }
-    }
-
-    void DashAbility()
-    {
-        if (_dashCooldownTime < 0)
-        {
-            _dashCooldownTime = dashCooldown;
-            _dashTime = dashDuration;
-        }
-    }
-
-    void PlayerAngle()
-    {
-        if (_playerDirection == -1)
-            _rigidBody2D.transform.eulerAngles = new Vector3(0, 180, 0);
-        else if (_playerDirection == 1)
-            _rigidBody2D.transform.eulerAngles = new Vector3(0, 0, 0);
-    }
-
-    void VerticalMovement()
-    {
-        // ----------- Accelerating the player ----------- //
-
-        if (_dashTime > 0)
-        {
-            _rigidBody2D.linearVelocity = new Vector2(dashSpeed * _playerDirection, 0);
-        }
-        else
-        {
-            if (accelerationSpeed < constantSpeed)
-            {
-                accelerationSpeed += accelerationFactor * Time.deltaTime;
-                _rigidBody2D.linearVelocity = new Vector2(accelerationSpeed * _playerDirection, _rigidBody2D.linearVelocityY);
-            }
-            else
-            {
-                _rigidBody2D.linearVelocity = new Vector2(constantSpeed * _playerDirection, _rigidBody2D.linearVelocityY);
-            }
-        }
-
-        // ----------- Decelerating the player ----------- //
+        if (!_isGrabbingTheWall) return;
         
-        if (!_isInAir && _playerDirection != 0)
-        {
-            _rigidBody2D.linearDamping = dampingForce;
-        }
-        
-        // This does not need fixing, it needs toning!!
-        if (_rigidBody2D.linearVelocityX == 0 && accelerationSpeed > 1f)
-            accelerationSpeed = 1f;
+        _isGrabbingTheWall = false;
+        PlayerWallGrabAnimation?.Invoke(false);
+        _rigidBody2D.constraints = RigidbodyConstraints2D.None;
+        _rigidBody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
+    }
+    
+    void HandleStartPlayerMovement()
+    {
+        _rigidBody2D.gravityScale = _dashTime > 0 ? 0 : gravityForce;
+        PlayerRunAnimation?.Invoke(1f);
     }
 
-    void HorizontalMovement()
+    void HandleStopPlayerMovement()
     {
+        // Decelerate the player if stopped moving
+        _rigidBody2D.linearDamping = IsTouchingGround() ? dampingForce : 0;
+        PlayerRunAnimation?.Invoke(0);
+    }
+    
+    void HandlePlayerRightMovement()
+    {
+        _rigidBody2D.transform.eulerAngles = new Vector3(0, 0, 0);
+        
+        if (_dashTime > 0) return;
+        _rigidBody2D.linearVelocity = new Vector2(constantSpeed, _rigidBody2D.linearVelocityY);
+
+        if (!IsTouchingRightSide() || IsTouchingGround()) return;
+        WallGrabbing();
+    }
+
+    void HandlePlayerLeftMovement()
+    {
+        _rigidBody2D.transform.eulerAngles = new Vector3(0, 180, 0);
+        
+        if (_dashTime > 0) return;
+        _rigidBody2D.linearVelocity = new Vector2(constantSpeed * -1, _rigidBody2D.linearVelocityY);
+
+        if (!IsTouchingLeftSide() || IsTouchingGround()) return;
+        WallGrabbing();
+    }
+
+    void HandlePlayerJump()
+    {
+        if (!IsTouchingGround() && !_canJumpFromWall) return;
+        
+        _rigidBody2D.constraints = RigidbodyConstraints2D.None;
+        _rigidBody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
+
+        if (_canJumpFromWall)
+        {
+            _canJumpFromWall = false;
+            _isGrabbingTheWall = false;
+            PlayerWallGrabAnimation?.Invoke(false);
+        }
+
         _rigidBody2D.linearDamping = 0;
         _rigidBody2D.linearVelocity = new Vector2(_rigidBody2D.linearVelocityX, jumpForce);
     }
 
-    void AnimationPlayer()
+    void HandlePlayerDash(int direction)
     {
-        animator.SetFloat(Speed, Mathf.Abs(_rigidBody2D.linearVelocityX));
-        animator.SetBool(IsDashing, _dashTime > 0);
-        animator.SetBool(IsJumping, _isInAir && _rigidBody2D.linearVelocityY > 0);
-        animator.SetBool(IsFalling, _isInAir && _rigidBody2D.linearVelocityY < -0.1f);
+        DashAbility();
+        if (_dashTime < 0) return;
+        _rigidBody2D.linearVelocity = new Vector2(dashSpeed * direction, 0);
+    }
+
+    private bool IsTouchingLeftSide() => Physics2D.Raycast(transform.position, Vector2.left, _playerHalfWidth - 0.05f, LayerMask.GetMask("Ground"));
+    private bool IsTouchingRightSide() => Physics2D.Raycast(transform.position, Vector2.right, _playerHalfWidth - 0.05f, LayerMask.GetMask("Ground"));
+    private bool IsTouchingGround() => Physics2D.Raycast(transform.position, Vector2.down, _playerHalfHight + .01f,LayerMask.GetMask("Ground"));
+
+    private void WallGrabbing()
+    {
+        _isGrabbingTheWall = true;
+        _canJumpFromWall = true;
+        _rigidBody2D.constraints = RigidbodyConstraints2D.FreezePosition;
+        PlayerWallGrabAnimation?.Invoke(true);
+    }
+
+    void DashAbility()
+    {
+        if (_dashCooldownTime > 0) return;
+        
+        _dashCooldownTime = dashCooldown;
+        _dashTime = dashDuration;
+    }
+
+    void PlayerAnimationController()
+    {
+        PlayerJumpAnimation?.Invoke(_rigidBody2D.linearVelocityY > 0.1f);
+        PlayerFallAnimation?.Invoke(_rigidBody2D.linearVelocityY < -0.1f);
+        PlayerDashAnimation?.Invoke(_dashTime > 0);
     }
 
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.layer == 3)
+        if (IsTouchingGround())
         {
-            _isInAir = false;
             _rigidBody2D.linearDamping = dampingForce;
         }
-
-        // if (collision.gameObject.layer == 6)
-        // {
-        //     if (Keyboard.current.aKey.isPressed)
-        //         isTouchingLeftWall = true;
-        //     
-        //     if(Keyboard.current.dKey.isPressed)
-        //         isTouchingRightWall = true;
-        //     
-        //     _rigidBody2D.linearVelocity = new Vector2(0, _rigidBody2D.linearVelocityY);
-        // }
     }
-
+    
     void OnCollisionExit2D(Collision2D collision)
     {
         if (collision.gameObject.layer == 3)
         {
-            _isInAir = true;
             _rigidBody2D.linearDamping = 0;
         }
     }
