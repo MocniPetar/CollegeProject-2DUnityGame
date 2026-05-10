@@ -7,6 +7,7 @@ public class AnimationControllerScript : MonoBehaviour
     public Animator playerAnimator;
     public Animator enemyAnimator;
     public Animator itemAnimator;
+    public Animator sceneTransitionAnimator;
     
     // Animation parameters ID's
     private static readonly int Speed = Animator.StringToHash("Speed");
@@ -14,6 +15,7 @@ public class AnimationControllerScript : MonoBehaviour
     private static readonly int IsJumping = Animator.StringToHash("IsJumping");
     private static readonly int IsFalling = Animator.StringToHash("IsFalling");
     private static readonly int CanGrabWall = Animator.StringToHash("canGrabWall");
+    private static readonly int Start = Animator.StringToHash("Start");
 
     private void OnEnable()
     {
@@ -23,6 +25,8 @@ public class AnimationControllerScript : MonoBehaviour
         PlayerScript.PlayerDashAnimation += HandlePlayerDashAnimation;
         PlayerScript.PlayerFallAnimation += HandlePlayerFallAnimation;
         PlayerScript.PlayerWallGrabAnimation += HandlePlayerWallGrabAnimation;
+        LevelLoaderScript.TransitionAnimation += HandleTransitionAnimation;
+        
     }
 
     private void OnDisable()
@@ -33,6 +37,7 @@ public class AnimationControllerScript : MonoBehaviour
         PlayerScript.PlayerDashAnimation -= HandlePlayerDashAnimation;
         PlayerScript.PlayerFallAnimation -= HandlePlayerFallAnimation;
         PlayerScript.PlayerWallGrabAnimation -= HandlePlayerWallGrabAnimation;
+        LevelLoaderScript.TransitionAnimation -= HandleTransitionAnimation;
     }
 
     private void HandlePlayerRunAnimation(float playerSpeed)
@@ -58,5 +63,10 @@ public class AnimationControllerScript : MonoBehaviour
     private void HandlePlayerWallGrabAnimation(bool isWallGrabbing)
     {
         playerAnimator.SetBool(CanGrabWall, isWallGrabbing);
+    }
+
+    private void HandleTransitionAnimation()
+    {
+        sceneTransitionAnimator.SetTrigger(Start);
     }
 }
