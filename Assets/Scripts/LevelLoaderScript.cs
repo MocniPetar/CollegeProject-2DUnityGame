@@ -15,28 +15,28 @@ public class LevelLoaderScript : MonoBehaviour
         transition.SetActive(true);
     }
 
-    // Only for testing purposes
-    void Update()
+    private void OnEnable()
     {
-        if (Keyboard.current.rightArrowKey.wasPressedThisFrame)
-        {
-            LoadNextLevel();
-        }
-        
-        if (Keyboard.current.leftArrowKey.wasPressedThisFrame)
-        {
-            LoadPreviousLevel();
-        }
+        InputScript.LoadNextLevel += LoadNextLevel;
+        InputScript.LoadPreviousLevel += LoadPreviousLevel;
     }
 
-    public void LoadNextLevel()
+    private void OnDisable()
+    {
+        InputScript.LoadNextLevel -= LoadNextLevel;
+        InputScript.LoadPreviousLevel -= LoadPreviousLevel;
+    }
+
+    private void LoadNextLevel()
     {
         if (SceneManager.GetActiveScene().buildIndex == 2) return;
-        StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1)); // Need to use StartCoroutine() to tell Unity that this function call is of type IEnumerator and that it is
-                                                                                        // going to wait (it will essential pause all other code execution)
+        
+        // Need to use StartCoroutine() to tell Unity that this function call is of type IEnumerator and that it is
+        // going to wait (it will essential pause all other code execution)
+        StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1));
     }
 
-    public void LoadPreviousLevel()
+    private void LoadPreviousLevel()
     {
         if (SceneManager.GetActiveScene().buildIndex == 0) return;
         StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex - 1));
@@ -54,5 +54,11 @@ public class LevelLoaderScript : MonoBehaviour
         
         //Load scene
         SceneManager.LoadScene(levelIndex);
+    }
+
+    public void RestartLevel()
+    {
+        // MovementControllerScript.PlayerIsDead = false;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

@@ -16,6 +16,7 @@ public class AnimationControllerScript : MonoBehaviour
     private static readonly int IsFalling = Animator.StringToHash("IsFalling");
     private static readonly int CanGrabWall = Animator.StringToHash("canGrabWall");
     private static readonly int Start = Animator.StringToHash("Start");
+    private static readonly int IsDead = Animator.StringToHash("IsDead");
 
     private void OnEnable()
     {
@@ -25,6 +26,7 @@ public class AnimationControllerScript : MonoBehaviour
         PlayerScript.PlayerDashAnimation += HandlePlayerDashAnimation;
         PlayerScript.PlayerFallAnimation += HandlePlayerFallAnimation;
         PlayerScript.PlayerWallGrabAnimation += HandlePlayerWallGrabAnimation;
+        PlayerScript.PlayerDeathAnimation += HandlePlayerDeathAnimation;
         LevelLoaderScript.TransitionAnimation += HandleTransitionAnimation;
         
     }
@@ -37,6 +39,7 @@ public class AnimationControllerScript : MonoBehaviour
         PlayerScript.PlayerDashAnimation -= HandlePlayerDashAnimation;
         PlayerScript.PlayerFallAnimation -= HandlePlayerFallAnimation;
         PlayerScript.PlayerWallGrabAnimation -= HandlePlayerWallGrabAnimation;
+        PlayerScript.PlayerDeathAnimation -= HandlePlayerDeathAnimation;
         LevelLoaderScript.TransitionAnimation -= HandleTransitionAnimation;
     }
 
@@ -63,6 +66,11 @@ public class AnimationControllerScript : MonoBehaviour
     private void HandlePlayerWallGrabAnimation(bool isWallGrabbing)
     {
         playerAnimator.SetBool(CanGrabWall, isWallGrabbing);
+    }
+    
+    private void HandlePlayerDeathAnimation()
+    {
+        playerAnimator.SetTrigger(IsDead);
     }
 
     private void HandleTransitionAnimation()

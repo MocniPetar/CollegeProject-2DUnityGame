@@ -1,16 +1,28 @@
+using System;
 using UnityEngine;
 
 public class TriggerDetectionScript : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    [SerializeField] private GameObject fKeyInput;
+
+    private void Awake()
     {
-        
+        fKeyInput.SetActive(false);
     }
 
-    // Update is called once per frame
-    void Update()
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        
+        if (other.CompareTag("Player"))
+        {
+            fKeyInput.SetActive(true);
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            fKeyInput.SetActive(false);
+        }
     }
 }

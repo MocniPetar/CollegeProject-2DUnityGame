@@ -18,11 +18,15 @@ public class PlayerScript : MonoBehaviour
     public static event Action<bool> PlayerWallGrabAnimation;
     public static event Action<bool> PlayerFallAnimation;
     public static event Action<bool> PlayerDashAnimation;
+    public static event Action PlayerDeathAnimation;
 
     // Player components
     private Rigidbody2D _rigidBody2D;
     private SpriteRenderer _spriteRenderer;
     public Animator animator;
+    
+    // Other components
+    [SerializeField] private GameObject deathUI;
     
     // Player movement variables
     [SerializeField] private float gravityForce;
@@ -73,6 +77,8 @@ public class PlayerScript : MonoBehaviour
         
         _playerHalfHight = _spriteRenderer.bounds.size.y / 2;
         _playerHalfWidth =  _spriteRenderer.bounds.size.x / 2;
+        
+        deathUI.SetActive(false);
     }
 
     private void OnEnable()
@@ -213,6 +219,15 @@ public class PlayerScript : MonoBehaviour
         if (IsTouchingGround())
         {
             _rigidBody2D.linearDamping = dampingForce;
+        }
+
+        if (collision.gameObject.layer == 7)
+        {
+            // trigger death animation and show death screen
+            PlayerDeathAnimation?.Invoke();
+            deathUI.SetActive(true);
+            _rigidBody2D.constraints = RigidbodyConstraints2D.FreezePosition;
+            MovementControllerScript.PlayerIsDead = true;
         }
     }
     

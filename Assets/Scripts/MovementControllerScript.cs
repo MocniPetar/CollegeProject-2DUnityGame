@@ -13,11 +13,18 @@ public class MovementControllerScript : MonoBehaviour
     public static event Action OnPlayerStartMoving;
 
     private int _direction = 0;
+    public static bool PlayerIsDead = false;
+
+    private void Awake()
+    {
+        PlayerIsDead = false;
+    }
 
     // Update is called once per frame
     void Update()
     {
-        KeyboardControl();
+        if (!PlayerIsDead)
+            KeyboardControl();
     }
 
     private void KeyboardControl()
