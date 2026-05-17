@@ -15,8 +15,9 @@ public class SpawningSystemScript : MonoBehaviour
     private readonly Dictionary<int, MainObjectSpawnerClass> _playerSpawnLocations = new ()
     {
         {
-            0, new ()
+            1, new ()
             {
+                LevelName = "IntroductionScene",
                 PlayerSpawnClass = new ()
                 {
                     SpawnPosition = new Vector3()
@@ -25,8 +26,9 @@ public class SpawningSystemScript : MonoBehaviour
             }
         },
         {
-            1, new MainObjectSpawnerClass()
+            2, new ()
             {
+                LevelName = "Area1Level1",
                 PlayerSpawnClass = new ()
                 {
                     SpawnPosition = new Vector3()
@@ -35,8 +37,20 @@ public class SpawningSystemScript : MonoBehaviour
             }
         },
         {
-            2, new MainObjectSpawnerClass()
+            3, new MainObjectSpawnerClass()
             {
+                LevelName = "Area1Level2",
+                PlayerSpawnClass = new ()
+                {
+                    SpawnPosition = new Vector3()
+                },
+                EnemySpawnClass =  new ()
+            }
+        },
+        {
+            4, new MainObjectSpawnerClass()
+            {
+                LevelName = "Area1Level3",
                 PlayerSpawnClass = new ()
                 {
                     SpawnPosition = new Vector3()

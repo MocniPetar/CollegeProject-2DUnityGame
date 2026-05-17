@@ -28,8 +28,9 @@ public class LevelLoaderScript : MonoBehaviour
     }
 
     private void LoadNextLevel()
-    {
-        if (SceneManager.GetActiveScene().buildIndex == 2) return;
+    {                                               
+        // This needs to be changed when adding or removing scenes
+        if (SceneManager.GetActiveScene().buildIndex == 4) return;
         
         // Need to use StartCoroutine() to tell Unity that this function call is of type IEnumerator and that it is
         // going to wait (it will essential pause all other code execution)
@@ -38,6 +39,7 @@ public class LevelLoaderScript : MonoBehaviour
 
     private void LoadPreviousLevel()
     {
+        // This needs to be changed when adding or removing scenes
         if (SceneManager.GetActiveScene().buildIndex == 0) return;
         StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex - 1));
     }

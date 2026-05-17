@@ -67,12 +67,12 @@ public class PlayerScript : MonoBehaviour
             
         if (_rigidBody2D == null)
         {
-            Debug.LogError("RigidBody2D missing on Player!");
+            throw new MissingComponentException("RigidBody2D missing on Player!");
         }
 
         if (_spriteRenderer == null)
         {
-            Debug.LogError("SpriteRenderer missing on Player!");
+            throw new MissingComponentException("SpriteRenderer missing on Player!");
         }
         
         _playerHalfHight = _spriteRenderer.bounds.size.y / 2;
@@ -106,8 +106,6 @@ public class PlayerScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Debug.DrawRay(transform.position, Vector2.left * (_playerHalfWidth - .1f), Color.red);
-        Debug.DrawRay(transform.position, Vector2.right * (_playerHalfWidth - .1f), Color.blue);
         Debug.DrawRay(transform.position, Vector2.down * (_playerHalfHight + .1f), Color.green);
         
         PlayerAnimationController();
@@ -115,6 +113,9 @@ public class PlayerScript : MonoBehaviour
         // Dash and Cool Down
         _dashTime -= Time.deltaTime;
         _dashCooldownTime -= Time.deltaTime;
+
+        if (_dashTime > 0) return;
+        _rigidBody2D.gravityScale = gravityForce;
     }
 
     void HandlePlayerReleasingTheWall()
@@ -129,7 +130,6 @@ public class PlayerScript : MonoBehaviour
     
     void HandleStartPlayerMovement()
     {
-        _rigidBody2D.gravityScale = _dashTime > 0 ? 0 : gravityForce;
         PlayerRunAnimation?.Invoke(1f);
     }
 
@@ -142,6 +142,7 @@ public class PlayerScript : MonoBehaviour
     
     void HandlePlayerRightMovement()
     {
+        Debug.DrawRay(transform.position, Vector2.right * (_playerHalfWidth - .1f), Color.blue);
         _rigidBody2D.transform.eulerAngles = new Vector3(0, 0, 0);
         
         if (_dashTime > 0) return;
@@ -153,6 +154,7 @@ public class PlayerScript : MonoBehaviour
 
     void HandlePlayerLeftMovement()
     {
+        Debug.DrawRay(transform.position, Vector2.left * (_playerHalfWidth - .1f), Color.red);
         _rigidBody2D.transform.eulerAngles = new Vector3(0, 180, 0);
         
         if (_dashTime > 0) return;
@@ -184,6 +186,8 @@ public class PlayerScript : MonoBehaviour
     {
         DashAbility();
         if (_dashTime < 0) return;
+        _rigidBody2D.gravityScale = 0;
+        _rigidBody2D.linearDamping = 0;
         _rigidBody2D.linearVelocity = new Vector2(dashSpeed * direction, 0);
     }
 
@@ -191,6 +195,27 @@ public class PlayerScript : MonoBehaviour
     private bool IsTouchingRightSide() => Physics2D.Raycast(transform.position, Vector2.right, _playerHalfWidth - 0.05f, LayerMask.GetMask("Ground"));
     private bool IsTouchingGround() => Physics2D.Raycast(transform.position, Vector2.down, _playerHalfHight + .01f,LayerMask.GetMask("Ground"));
 
+    private float CheckDashPossibleDistance(int direction)
+    {
+        float distance = 0;
+        
+        // Check for ground
+        if (Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left,
+                _playerHalfWidth - 0.05f, LayerMask.GetMask("Ground")))
+        {
+            // Calculate the distance
+        }
+        
+        // Check for kill ground
+        if (Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left,
+                _playerHalfWidth - 0.05f, LayerMask.GetMask("Kill")))
+        {
+            // Calculate the distance
+        }
+
+        return distance;
+    }
+    
     private void WallGrabbing()
     {
         _isGrabbingTheWall = true;
