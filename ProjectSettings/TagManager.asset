@@ -4,18 +4,24 @@
 TagManager:
   serializedVersion: 3
   tags:
-  - Tile
   - TileMap
   - UI
+  - Item
+  - Door
+  - Bullet
+  - Turret
+  - Ground
+  - Kill
+  - Tile
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - Ground
+  - Tile
   - Water
   - UI
-  - Wall
-  - Kill
+  - Bullet
+  - 
   - 
   - 
   - 

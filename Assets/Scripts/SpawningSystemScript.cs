@@ -18,6 +18,7 @@ public class SpawningSystemScript : MonoBehaviour
             1, new ()
             {
                 LevelName = "IntroductionScene",
+                HasDoor = false,
                 PlayerSpawnClass = new ()
                 {
                     SpawnPosition = new Vector3()
@@ -29,6 +30,7 @@ public class SpawningSystemScript : MonoBehaviour
             2, new ()
             {
                 LevelName = "Area1Level1",
+                HasDoor = false,
                 PlayerSpawnClass = new ()
                 {
                     SpawnPosition = new Vector3()
@@ -40,6 +42,7 @@ public class SpawningSystemScript : MonoBehaviour
             3, new MainObjectSpawnerClass()
             {
                 LevelName = "Area1Level2",
+                HasDoor = false,
                 PlayerSpawnClass = new ()
                 {
                     SpawnPosition = new Vector3()
@@ -51,6 +54,19 @@ public class SpawningSystemScript : MonoBehaviour
             4, new MainObjectSpawnerClass()
             {
                 LevelName = "Area1Level3",
+                HasDoor = true,
+                PlayerSpawnClass = new ()
+                {
+                    SpawnPosition = new Vector3()
+                },
+                EnemySpawnClass =  new ()
+            }
+        },
+        {
+            5, new MainObjectSpawnerClass()
+            {
+                LevelName = "Area1Level4",
+                HasDoor = false,
                 PlayerSpawnClass = new ()
                 {
                     SpawnPosition = new Vector3()
@@ -61,7 +77,7 @@ public class SpawningSystemScript : MonoBehaviour
     };
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    private void Start()
     {
         int currentSceneIndex = SceneManager.GetActiveScene().buildIndex;
         foreach (var playerSpawnLocation in _playerSpawnLocations)

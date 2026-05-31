@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 public class MovementControllerScript : MonoBehaviour
 {
-    public static event Action OnPlayerHoldingWall;
+    public static event Action<int> OnPlayerHoldingWall;
     public static event Action OnPlayerMoveRight;
     public static event Action OnPlayerMoveLeft;
     public static event Action OnPlayerJump;
@@ -12,7 +12,7 @@ public class MovementControllerScript : MonoBehaviour
     public static event Action OnPlayerStopMoving;
     public static event Action OnPlayerStartMoving;
 
-    private int _direction = 0;
+    private int _direction = 1;
     public static bool PlayerIsDead = false;
 
     private void Awake()
@@ -24,35 +24,47 @@ public class MovementControllerScript : MonoBehaviour
     void Update()
     {
         if (!PlayerIsDead)
-            KeyboardControl();
+            KeyboardControlUsingUpdate();
     }
 
-    private void KeyboardControl()
+    private void FixedUpdate()
     {
-        // letting go of the wall
-        if (Keyboard.current.wKey.wasPressedThisFrame)
+        if (!PlayerIsDead)
+            KeyboardControlUsingFixedUpdate();
+    }
+
+    private void KeyboardControlUsingUpdate()
+    {
+       // trigger when player started moving
+        if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
         {
-            OnPlayerHoldingWall?.Invoke();
-        }
-        
-        // moving left control
-        if (Keyboard.current.aKey.isPressed)
-        {
-            _direction = -1;
-            OnPlayerMoveLeft?.Invoke();
-        }
-        
-        // moving right control
-        if (Keyboard.current.dKey.isPressed)
-        {
-            _direction = 1;
-            OnPlayerMoveRight?.Invoke();
+            OnPlayerStartMoving?.Invoke();
         }
         
         // jump up control
         if (Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             OnPlayerJump?.Invoke();
+        }
+        
+        // letting go of the wall
+        if (Keyboard.current.wKey.wasPressedThisFrame)
+        {
+            OnPlayerHoldingWall?.Invoke(_direction);
+        }
+        
+        // trigger when player started moving left
+        if (Keyboard.current.aKey.wasPressedThisFrame)
+        {
+            _direction = -1;
+            OnPlayerHoldingWall?.Invoke(_direction);
+        }
+
+        // trigger when player started moving right
+        if (Keyboard.current.dKey.wasPressedThisFrame)
+        {
+            _direction = 1;
+            OnPlayerHoldingWall?.Invoke(_direction);
         }
         
         // dash multi-directional control
@@ -65,13 +77,28 @@ public class MovementControllerScript : MonoBehaviour
         if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
         {
             OnPlayerStartMoving?.Invoke();
-            OnPlayerHoldingWall?.Invoke();
+            OnPlayerHoldingWall?.Invoke(_direction);
         }
         
         // trigger when player stopped moving
         if (Keyboard.current.aKey.wasReleasedThisFrame || Keyboard.current.dKey.wasReleasedThisFrame)
         {
             OnPlayerStopMoving?.Invoke();
+        }
+    }
+    
+    private void KeyboardControlUsingFixedUpdate()
+    {
+        // moving left control
+        if (Keyboard.current.aKey.isPressed)
+        {
+            OnPlayerMoveLeft?.Invoke();
+        }
+        
+        // moving right control
+        if (Keyboard.current.dKey.isPressed)
+        {
+            OnPlayerMoveRight?.Invoke();
         }
     }
 }

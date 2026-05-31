@@ -17,7 +17,7 @@ public class TriggerDetectionScript : MonoBehaviour
         {
             // These need to be changed when adding or removing scenes
             if (gameObject.name == "PlayerSpawnPoint" && SceneManager.GetActiveScene().buildIndex - 1 < 1) return;
-            if (gameObject.name == "PlayerNextLevelTrigger" && SceneManager.GetActiveScene().buildIndex + 1 > 4) return;
+            if (gameObject.name == "PlayerNextLevelTrigger" && SceneManager.GetActiveScene().buildIndex + 1 > 5) return;
             
             fKeyInput.SetActive(true);
         }

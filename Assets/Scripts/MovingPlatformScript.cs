@@ -3,49 +3,46 @@ using UnityEngine;
 
 public class MovingPlatformScript : MonoBehaviour
 {
-    [SerializeField] private bool isMovingFromLeftToRight;
-    [SerializeField] private float speed;
     private Rigidbody2D _rigidbody2D;
-
-    [SerializeField] private float maxTopAmount;
-    [SerializeField] private float maxBottomAmount;
-    [SerializeField] private float maxLeftAmount;
-    [SerializeField] private float maxRightAmount;
+    [SerializeField] private float speed;
     [SerializeField] private int direction;
+    [SerializeField] private bool horizontalMovement;
+    [SerializeField] private float maxAmount;
+    private float _counter;
 
     private void Awake()
     {
+        _counter = 0;
         _rigidbody2D = GetComponent<Rigidbody2D>();
         if (_rigidbody2D == null)
         {
             throw new MissingComponentException("No rigidbody2D found");
         }
     }
+    
+    private void Update()
+    {
+        if (_counter < maxAmount) return;
+        direction = direction == 1 ? -1 : 1;
+        _counter = 0;
+    }
 
     // Update is called once per frame
-    void Update()
+    private void FixedUpdate()
     {
-        if (!isMovingFromLeftToRight)
+        switch (horizontalMovement)
         {
-            if (_rigidbody2D.transform.position.y > maxTopAmount)
-                direction = -1;
+            case true:
+                _rigidbody2D.transform.position =
+                    new Vector3(transform.position.x + (speed * direction * Time.deltaTime), transform.position.y, transform.position.z);
+                break;
             
-            if (_rigidbody2D.transform.position.y < maxBottomAmount)
-                direction = 1;
-            
-            _rigidbody2D.transform.position = 
-                new Vector3(transform.position.x, transform.position.y + (speed * direction * Time.deltaTime), transform.position.z);
+            case false:
+                _rigidbody2D.transform.position = 
+                    new Vector3(transform.position.x, transform.position.y + (speed * direction * Time.deltaTime), transform.position.z);
+                break;
         }
         
-        if (isMovingFromLeftToRight)
-        {
-            if (_rigidbody2D.transform.position.y > maxLeftAmount)
-                _rigidbody2D.transform.position =
-                    new Vector3(transform.position.x - speed * Time.deltaTime, transform.position.y, transform.position.z);
-
-            else if (_rigidbody2D.transform.position.y < maxRightAmount)
-                _rigidbody2D.transform.position =
-                    new Vector3(transform.position.x + speed * Time.deltaTime, transform.position.y, transform.position.z);
-        }
+        _counter += speed * Time.deltaTime;
     }
 }

@@ -1,11 +1,12 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public class AnimationControllerScript : MonoBehaviour
 {
     // Game object animators
     public Animator playerAnimator;
-    public Animator enemyAnimator;
+    public Animator turretAnimator;
     public Animator itemAnimator;
     public Animator sceneTransitionAnimator;
     
@@ -17,6 +18,7 @@ public class AnimationControllerScript : MonoBehaviour
     private static readonly int CanGrabWall = Animator.StringToHash("canGrabWall");
     private static readonly int Start = Animator.StringToHash("Start");
     private static readonly int IsDead = Animator.StringToHash("IsDead");
+    private static readonly int Fire = Animator.StringToHash("Fire");
 
     private void OnEnable()
     {
@@ -27,8 +29,12 @@ public class AnimationControllerScript : MonoBehaviour
         PlayerScript.PlayerFallAnimation += HandlePlayerFallAnimation;
         PlayerScript.PlayerWallGrabAnimation += HandlePlayerWallGrabAnimation;
         PlayerScript.PlayerDeathAnimation += HandlePlayerDeathAnimation;
+        
+        // Level loading animations
         LevelLoaderScript.TransitionAnimation += HandleTransitionAnimation;
         
+        // Turret animations
+        TurretScript.FireTurretAnimation += HandleTurretFiringAnimation;
     }
 
     private void OnDisable()
@@ -40,7 +46,12 @@ public class AnimationControllerScript : MonoBehaviour
         PlayerScript.PlayerFallAnimation -= HandlePlayerFallAnimation;
         PlayerScript.PlayerWallGrabAnimation -= HandlePlayerWallGrabAnimation;
         PlayerScript.PlayerDeathAnimation -= HandlePlayerDeathAnimation;
+        
+        // Level loading animations
         LevelLoaderScript.TransitionAnimation -= HandleTransitionAnimation;
+        
+        // Turret animations
+        TurretScript.FireTurretAnimation -= HandleTurretFiringAnimation;
     }
 
     private void HandlePlayerRunAnimation(float playerSpeed)
@@ -76,5 +87,10 @@ public class AnimationControllerScript : MonoBehaviour
     private void HandleTransitionAnimation()
     {
         sceneTransitionAnimator.SetTrigger(Start);
+    }
+
+    private void HandleTurretFiringAnimation()
+    {
+        turretAnimator.SetTrigger(Fire);
     }
 }
