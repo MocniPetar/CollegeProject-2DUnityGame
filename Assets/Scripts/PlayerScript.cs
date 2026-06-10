@@ -131,14 +131,14 @@ public class PlayerScript : MonoBehaviour
     
     void HandleStartPlayerMovement()
     {
-        PlayerRunAnimation?.Invoke(1f);
+        // PlayerRunAnimation?.Invoke(constantSpeed);
     }
 
     void HandleStopPlayerMovement()
     {
         // Decelerate the player if stopped moving
-        _rigidBody2D.linearDamping = IsTouchingGround() ? dampingForce : 0;
-        PlayerRunAnimation?.Invoke(0);
+        _rigidBody2D.linearDamping = IsTouchingGround() || IsTouchingWall() ? dampingForce : 0;
+        // PlayerRunAnimation?.Invoke(-constantSpeed);
     }
     
     void HandlePlayerRightMovement()
@@ -150,7 +150,7 @@ public class PlayerScript : MonoBehaviour
         if (_dashTime > 0) return;
         _rigidBody2D.linearVelocity = new Vector2(constantSpeed, _rigidBody2D.linearVelocityY);
 
-        if (!IsTouchingRightSide() || IsTouchingGround()) return;
+        if (!IsTouchingRightSide() || IsTouchingGround() || IsTouchingWall()) return;
         WallGrabbing();
     }
 
@@ -163,13 +163,13 @@ public class PlayerScript : MonoBehaviour
         if (_dashTime > 0) return;
         _rigidBody2D.linearVelocity = new Vector2(constantSpeed * -1, _rigidBody2D.linearVelocityY);
 
-        if (!IsTouchingLeftSide() || IsTouchingGround()) return;
+        if (!IsTouchingLeftSide() || IsTouchingGround() || IsTouchingWall()) return;
         WallGrabbing();
     }
 
     void HandlePlayerJump()
     {
-        if (!IsTouchingGround() && !_canJumpFromWall) return;
+        if (!IsTouchingGround() && !IsTouchingWall() && !_canJumpFromWall) return;
         
         _rigidBody2D.constraints = RigidbodyConstraints2D.None;
         _rigidBody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
@@ -197,15 +197,31 @@ public class PlayerScript : MonoBehaviour
         _rigidBody2D.linearVelocity = new Vector2(_rigidBody2D.linearVelocityX, jumpForce / 2);
     }
 
-    private bool IsTouchingLeftSide() => Physics2D.Raycast(transform.position, Vector2.left, _playerHalfWidth - 0.05f, LayerMask.GetMask("Tile"));
-    private bool IsTouchingRightSide() => Physics2D.Raycast(transform.position, Vector2.right, _playerHalfWidth - 0.05f, LayerMask.GetMask("Tile"));
+    private bool IsTouchingLeftSide()
+    {
+        if(Physics2D.Raycast(transform.position, Vector2.left, _playerHalfWidth - 0.05f, LayerMask.GetMask("Tile"))) return true;
+        return Physics2D.Raycast(transform.position, Vector2.left, _playerHalfWidth - 0.05f,
+            LayerMask.GetMask("WallTile"));
+    }
+    
+    private bool IsTouchingRightSide()
+    {
+        if(Physics2D.Raycast(transform.position, Vector2.right, _playerHalfWidth - 0.05f, LayerMask.GetMask("Tile"))) return true;
+        return Physics2D.Raycast(transform.position, Vector2.right, _playerHalfWidth - 0.05f,
+            LayerMask.GetMask("WallTile"));
+    }
+    
     private bool IsTouchingGround() => Physics2D.Raycast(transform.position, Vector2.down, _playerHalfHight + .01f,LayerMask.GetMask("Tile"));
+    private bool IsTouchingWall() => Physics2D.Raycast(transform.position, Vector2.down, _playerHalfHight + .01f,LayerMask.GetMask("WallTile"));
 
     private float CheckDashDistance(int direction)
     {
-        var hitWall = Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left, dashDistance, LayerMask.GetMask("Tile"));
+        var hitGround = Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left, dashDistance, LayerMask.GetMask("Tile"));
+        var hitWall = Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left, dashDistance, LayerMask.GetMask("WallTile"));
 
+        if (hitGround && hitGround.distance > 0) return dashDistance - hitGround.distance;
         if (hitWall && hitWall.distance > 0) return dashDistance - hitWall.distance;
+
         return 0;
     }
     
@@ -227,6 +243,7 @@ public class PlayerScript : MonoBehaviour
 
     void PlayerAnimationController()
     {
+        PlayerRunAnimation?.Invoke(Mathf.Abs(_rigidBody2D.linearVelocityX));
         PlayerJumpAnimation?.Invoke(_rigidBody2D.linearVelocityY > 0.1f);
         PlayerFallAnimation?.Invoke(_rigidBody2D.linearVelocityY < -0.1f);
         PlayerDashAnimation?.Invoke(_dashTime > 0);
@@ -234,7 +251,7 @@ public class PlayerScript : MonoBehaviour
 
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if (IsTouchingGround())
+        if (IsTouchingGround() || IsTouchingWall())
         {
             _rigidBody2D.linearDamping = dampingForce;
         }
