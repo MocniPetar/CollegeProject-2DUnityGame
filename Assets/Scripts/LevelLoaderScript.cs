@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -7,8 +8,10 @@ using UnityEngine.SceneManagement;
 public class LevelLoaderScript : MonoBehaviour
 {
     [SerializeField] private GameObject transition;
+    [SerializeField] [CanBeNull] private GameObject deathUI;
+    [SerializeField] [CanBeNull] private GameObject pauseMenu;
     public static event Action TransitionAnimation;
-    public float transitionTime = 1f;
+    public float transitionTime = 1.5f;
 
     private void Awake()
     {
@@ -30,7 +33,7 @@ public class LevelLoaderScript : MonoBehaviour
     private void LoadNextLevel()
     {                                               
         // This needs to be changed when adding or removing scenes
-        if (SceneManager.GetActiveScene().buildIndex == 5) return;
+        if (SceneManager.GetActiveScene().buildIndex == 6) return;
         
         // Need to use StartCoroutine() to tell Unity that this function call is of type IEnumerator and that it is
         // going to wait (it will essential pause all other code execution)
@@ -40,8 +43,19 @@ public class LevelLoaderScript : MonoBehaviour
     private void LoadPreviousLevel()
     {
         // This needs to be changed when adding or removing scenes
-        if (SceneManager.GetActiveScene().buildIndex == 0) return;
+        if (SceneManager.GetActiveScene().buildIndex == 1) return;
         StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex - 1));
+    }
+    
+    public void GoToMainMenu()
+    {
+        if (deathUI != null && deathUI.activeSelf)
+            deathUI.SetActive(false);
+        
+        if (pauseMenu != null && pauseMenu.activeSelf)
+            pauseMenu.SetActive(false);
+        
+        StartCoroutine(LoadLevel(0));
     }
 
     // Use this when you want to delay something - in this situation we want to start the transition animation and wait for 1 second (which is the animation duration),
@@ -57,10 +71,27 @@ public class LevelLoaderScript : MonoBehaviour
         //Load scene
         SceneManager.LoadScene(levelIndex);
     }
+    
+    public void StartFirstLevel()
+    {
+        StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1));
+    }
 
     public void RestartLevel()
     {
         // MovementControllerScript.PlayerIsDead = false;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+    
+    public void QuitGame()
+    {
+        // Closes the built game application
+        Application.Quit();
+
+        // Output a message to the console so you can test it inside the Unity Editor
+        #if UNITY_EDITOR
+                Debug.Log("Game Exited!");
+                UnityEditor.EditorApplication.isPlaying = false;
+        #endif
     }
 }

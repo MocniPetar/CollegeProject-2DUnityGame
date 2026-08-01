@@ -14,6 +14,7 @@ TagManager:
   - Kill
   - Tile
   - Wall
+  - Ledge
   layers:
   - Default
   - TransparentFX
@@ -22,7 +23,7 @@ TagManager:
   - Water
   - UI
   - Bullet
-  - WallTile
+  - Ledge
   - 
   - 
   - 

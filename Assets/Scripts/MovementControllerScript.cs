@@ -10,7 +10,6 @@ public class MovementControllerScript : MonoBehaviour
     public static event Action OnPlayerJump;
     public static event Action<int> OnPlayerDash;
     public static event Action OnPlayerStopMoving;
-    public static event Action OnPlayerStartMoving;
 
     private int _direction = 1;
     public static bool PlayerIsDead = false;
@@ -35,12 +34,6 @@ public class MovementControllerScript : MonoBehaviour
 
     private void KeyboardControlUsingUpdate()
     {
-       // trigger when player started moving
-        if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
-        {
-            OnPlayerStartMoving?.Invoke();
-        }
-        
         // jump up control
         if (Keyboard.current.spaceKey.wasPressedThisFrame)
         {
@@ -57,14 +50,12 @@ public class MovementControllerScript : MonoBehaviour
         if (Keyboard.current.aKey.wasPressedThisFrame)
         {
             _direction = -1;
-            OnPlayerHoldingWall?.Invoke(_direction);
         }
 
         // trigger when player started moving right
         if (Keyboard.current.dKey.wasPressedThisFrame)
         {
             _direction = 1;
-            OnPlayerHoldingWall?.Invoke(_direction);
         }
         
         // dash multi-directional control
@@ -76,7 +67,6 @@ public class MovementControllerScript : MonoBehaviour
         // trigger when player started moving
         if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
         {
-            OnPlayerStartMoving?.Invoke();
             OnPlayerHoldingWall?.Invoke(_direction);
         }
         

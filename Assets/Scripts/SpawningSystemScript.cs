@@ -17,7 +17,7 @@ public class SpawningSystemScript : MonoBehaviour
         {
             1, new ()
             {
-                LevelName = "IntroductionScene",
+                LevelName = "MainMenu",
                 HasDoor = false,
                 PlayerSpawnClass = new ()
                 {
@@ -29,7 +29,7 @@ public class SpawningSystemScript : MonoBehaviour
         {
             2, new ()
             {
-                LevelName = "Area1Level1",
+                LevelName = "IntroductionScene",
                 HasDoor = false,
                 PlayerSpawnClass = new ()
                 {
@@ -39,9 +39,9 @@ public class SpawningSystemScript : MonoBehaviour
             }
         },
         {
-            3, new MainObjectSpawnerClass()
+            3, new ()
             {
-                LevelName = "Area1Level2",
+                LevelName = "Area1Level1",
                 HasDoor = false,
                 PlayerSpawnClass = new ()
                 {
@@ -53,6 +53,18 @@ public class SpawningSystemScript : MonoBehaviour
         {
             4, new MainObjectSpawnerClass()
             {
+                LevelName = "Area1Level2",
+                HasDoor = false,
+                PlayerSpawnClass = new ()
+                {
+                    SpawnPosition = new Vector3()
+                },
+                EnemySpawnClass =  new ()
+            }
+        },
+        {
+            5, new MainObjectSpawnerClass()
+            {
                 LevelName = "Area1Level3",
                 HasDoor = true,
                 PlayerSpawnClass = new ()
@@ -63,7 +75,7 @@ public class SpawningSystemScript : MonoBehaviour
             }
         },
         {
-            5, new MainObjectSpawnerClass()
+            6, new MainObjectSpawnerClass()
             {
                 LevelName = "Area1Level4",
                 HasDoor = false,
