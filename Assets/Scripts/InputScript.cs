@@ -9,46 +9,52 @@ public class InputScript : MonoBehaviour
     public static event Action<bool> OnFreezePlayer;
     public static event Action<bool> OnFreezeBullet;
     public static event Func<bool> TurretFireControl;
-    
-    [SerializeField] [CanBeNull] private GameObject UI;
-    [SerializeField] private GameObject deathUI;
-    [SerializeField] private GameObject pauseMenu;
+    public static event Action GoToSelectMenu;
     public static event Action LoadNextLevel;
-    public static event Action LoadPreviousLevel;
-    
-    [SerializeField] private GameObject triggerOne;
-    [SerializeField] private GameObject triggerTwo;
+    public static bool IsSelectedLevel { get; set; }
+
+    [SerializeField] [CanBeNull] private GameObject UI;
+    [SerializeField] [CanBeNull] private GameObject deathUI;
+    [SerializeField] [CanBeNull] private GameObject pauseMenu;
+    [SerializeField] [CanBeNull] private GameObject trigger;
 
     private void Awake()
     {
-        pauseMenu.SetActive(false);
+        if (pauseMenu != null)
+            pauseMenu?.SetActive(false);
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
         OnInput();
     }
 
-    void OnInput()
+    private void OnInput()
     {
         // F key - interacted with the spawning/despawning platform
         if (Keyboard.current.fKey.wasPressedThisFrame)
         {
-            if (triggerOne.transform.GetChild(0).gameObject.activeSelf)
+            if (trigger && trigger.transform.GetChild(0).gameObject.activeSelf)
             {
-                LoadPreviousLevel?.Invoke();
-            }
-            
-            if (triggerTwo.transform.GetChild(0).gameObject.activeSelf)
-            {
-                if (UI != null && UI.activeSelf)
+                if (UI && UI.activeSelf)
+                {
                     UI.SetActive(false);
-                LoadNextLevel?.Invoke();
+                }
+
+                if (IsSelectedLevel)
+                {
+                    GoToSelectMenu?.Invoke();
+                }
+                else
+                {
+                    LoadNextLevel?.Invoke();
+                }
             }
         }
 
-        if (Keyboard.current.escapeKey.wasPressedThisFrame && !deathUI.activeSelf)
+        // Esc key - to open the pause menu
+        if (Keyboard.current.escapeKey.wasPressedThisFrame && deathUI != null && !deathUI.activeSelf)
         {
             ContinueGame();
         }
@@ -58,10 +64,16 @@ public class InputScript : MonoBehaviour
     {
         if (FindAnyObjectByType<TurretScript>())
         {
-            OnFreezeBullet?.Invoke(TurretFireControl.Invoke());
+            bool? turretShootingState = TurretFireControl?.Invoke();
+
+            if (turretShootingState.HasValue)
+            {
+                OnFreezeBullet?.Invoke(turretShootingState.Value);
+            }
         }
         MovementControllerScript.PlayerIsDead = !MovementControllerScript.PlayerIsDead;
         OnFreezePlayer?.Invoke(!MovementControllerScript.PlayerIsDead);
-        pauseMenu.SetActive(!pauseMenu.activeSelf);
+        if (pauseMenu != null)
+            pauseMenu?.SetActive(!pauseMenu.activeSelf);
     }
 }

@@ -24,6 +24,9 @@ public class PlayerScript : MonoBehaviour
     // Other components
     [SerializeField] private GameObject deathUI;
     [SerializeField] private GameObject dashObject;
+    [SerializeField] private ParticleSystem slideGrindArm;
+    [SerializeField] private ParticleSystem slideGrindLeg;
+    [SerializeField] private LayerMask tileLayer;
     
     // Player movement variables
     [SerializeField] private float gravityForce;
@@ -44,7 +47,7 @@ public class PlayerScript : MonoBehaviour
     //      - every timer is subtracted by Time.deltaTime
     private float _dashTime;
     private float _dashCooldownTime;
-    private int _dashDirection = 1;
+    private int _direction = 1;
     [SerializeField] private float dashSpeed;
     [SerializeField] private float dashDuration;
     [SerializeField] private float dashJump;
@@ -59,6 +62,7 @@ public class PlayerScript : MonoBehaviour
     private float _playerHalfHight = 0;
     private float _playerHalfWidth = 0;
     [SerializeField] private bool isInvincible = false;
+    private int _ledgeLayer;
     
     private void Awake()
     {
@@ -74,9 +78,11 @@ public class PlayerScript : MonoBehaviour
         {
             throw new MissingComponentException("SpriteRenderer missing on Player!");
         }
-        
-        _playerHalfHight = _spriteRenderer.bounds.size.y / 2;
-        _playerHalfWidth =  _spriteRenderer.bounds.size.x / 2;
+
+        dashDistance -= 0.5f;
+        _playerHalfHight = _spriteRenderer.bounds.size.y / 2 + .1f;
+        _playerHalfWidth = 0.4f;
+        _ledgeLayer = LayerMask.NameToLayer("Ledge");
         
         deathUI.SetActive(false);
     }
@@ -89,6 +95,7 @@ public class PlayerScript : MonoBehaviour
         MovementControllerScript.OnPlayerJump += HandlePlayerJump;
         MovementControllerScript.OnPlayerDash += HandlePlayerDash;
         MovementControllerScript.OnPlayerStopMoving += HandleStopPlayerMovement;
+        MovementControllerScript.OnPlayerSlidingDown += HandlePlayerSlidingDown;
         InputScript.OnFreezePlayer += HandleFreezePlayer;
     }
 
@@ -100,14 +107,17 @@ public class PlayerScript : MonoBehaviour
         MovementControllerScript.OnPlayerJump -= HandlePlayerJump;
         MovementControllerScript.OnPlayerDash -= HandlePlayerDash;
         MovementControllerScript.OnPlayerStopMoving -= HandleStopPlayerMovement;
+        MovementControllerScript.OnPlayerSlidingDown -= HandlePlayerSlidingDown;
         InputScript.OnFreezePlayer -= HandleFreezePlayer;
     }
 
     // Update is called once per frame
     private void Update()
     {
-        Debug.DrawRay(transform.position, Vector2.down * (_playerHalfHight + .1f), Color.green);
-        Debug.DrawRay(transform.position, (_dashDirection == -1 ? Vector2.left : Vector2.right) * dashDistance, Color.orange);
+        Debug.DrawRay(transform.position, Vector2.down * (_playerHalfHight), Color.green);
+        // Debug.DrawRay(transform.position, (_direction == -1 ? Vector2.left : Vector2.right) * dashDistance, Color.orange);
+        Debug.DrawRay(transform.position, Vector2.right * (_playerHalfWidth + 0.05f), Color.blue);
+        Debug.DrawRay(transform.position, Vector2.left * (_playerHalfWidth + 0.05f), Color.blue);
         
         PlayerAnimationController();
         
@@ -134,34 +144,64 @@ public class PlayerScript : MonoBehaviour
         _rigidBody2D.linearVelocity = new Vector2(0.3f * (-direction), _rigidBody2D.linearVelocityY);
     }
 
+    private void HandlePlayerSlidingDown(int direction)
+    {
+        if (!_isGrabbingTheWall) return;
+
+        if (IsTouchingWall(direction))
+        {
+            StartSlidingEffect();
+            _rigidBody2D.constraints = RigidbodyConstraints2D.None;
+            _rigidBody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
+            _rigidBody2D.linearDamping = dampingForce;
+            return;
+        }
+        
+        _isGrabbingTheWall = false;
+        StopSlidingEffect();
+        PlayerWallGrabAnimation?.Invoke(false);
+        _rigidBody2D.constraints = RigidbodyConstraints2D.None;
+        _rigidBody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
+        _rigidBody2D.linearDamping = 0;
+    }
+
     private void HandleStopPlayerMovement()
     {
         // Decelerate the player if stopped moving
-        _rigidBody2D.linearDamping = IsTouchingGround() || IsTouchingWall(_rigidBody2D.linearVelocityX >= 0 ? 1 : -1) ? dampingForce : 0;
+        _rigidBody2D.linearDamping = IsTouchingGround() || IsTouchingWall() ? dampingForce : 0;
     }
     
     private void HandlePlayerRightMovement()
     {
-        Debug.DrawRay(transform.position, Vector2.right * (_playerHalfWidth - .1f), Color.blue);
+        Debug.DrawRay(transform.position, Vector2.right * (_playerHalfWidth + .1f), Color.blue);
         _rigidBody2D.transform.eulerAngles = new Vector3(0, 0, 0);
-        _dashDirection = 1;
+        _direction = 1;
         
         if (_dashTime > 0) return;
-        _rigidBody2D.linearVelocity = new Vector2(constantSpeed, _rigidBody2D.linearVelocityY);
 
-        if (IsTouchingWall(1) && !IsTouchingGround()) WallGrabbing();
+        if (!_isGrabbingTheWall && IsTouchingWall(_direction) && !IsTouchingGround())
+        {
+            WallGrabbing();
+            return;
+        }
+        _rigidBody2D.linearVelocity = new Vector2(constantSpeed, _rigidBody2D.linearVelocityY);
     }
 
     private void HandlePlayerLeftMovement()
     {
-        Debug.DrawRay(transform.position, Vector2.left * (_playerHalfWidth - .1f), Color.red);
+        Debug.DrawRay(transform.position, Vector2.left * (_playerHalfWidth + .1f), Color.red);
         _rigidBody2D.transform.eulerAngles = new Vector3(0, 180, 0);
-        _dashDirection = -1;
+        _direction = -1;
         
         if (_dashTime > 0) return;
-        _rigidBody2D.linearVelocity = new Vector2(constantSpeed * -1, _rigidBody2D.linearVelocityY);
 
-        if (IsTouchingWall(-1) && !IsTouchingGround()) WallGrabbing();
+        if (!_isGrabbingTheWall && IsTouchingWall(_direction) && !IsTouchingGround())
+        {
+            WallGrabbing();
+            return;
+        }
+        
+        _rigidBody2D.linearVelocity = new Vector2(constantSpeed * -1, _rigidBody2D.linearVelocityY);
     }
 
     private void HandlePlayerJump()
@@ -175,6 +215,7 @@ public class PlayerScript : MonoBehaviour
         {
             _canJumpFromWall = false;
             _isGrabbingTheWall = false;
+            StopSlidingEffect();
             PlayerWallGrabAnimation?.Invoke(false);
         }
 
@@ -189,9 +230,9 @@ public class PlayerScript : MonoBehaviour
 
         DashUIAnimation?.Invoke(dashCooldown);
         
-        float distance = CheckDashDistance(direction);
+        var distance = CheckDashDistance(direction);
         _rigidBody2D.transform.position = new Vector3(
-            _rigidBody2D.transform.position.x + (dashDistance - 0.5f - distance) * direction, 
+            _rigidBody2D.transform.position.x + (dashDistance - distance) * direction, 
             _rigidBody2D.transform.position.y, 
             _rigidBody2D.transform.position.z);
         _rigidBody2D.linearVelocity = new Vector2(_rigidBody2D.linearVelocityX, jumpForce / 2);
@@ -215,15 +256,18 @@ public class PlayerScript : MonoBehaviour
         }
     }
     
-    private bool IsTouchingGround() => Physics2D.Raycast(transform.position, Vector2.down, _playerHalfHight + .01f,LayerMask.GetMask("Tile"));
-    private bool IsTouchingWall(int direction) => Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left, _playerHalfWidth + .01f,LayerMask.GetMask("Tile"));
+    private bool IsTouchingGround() => Physics2D.Raycast(transform.position, Vector2.down, _playerHalfHight, tileLayer);
+
+    private bool IsTouchingWall() => 
+        Physics2D.Raycast(transform.position, Vector2.right, _playerHalfWidth, tileLayer) 
+        || Physics2D.Raycast(transform.position, Vector2.left, _playerHalfWidth, tileLayer);
+    
+    private bool IsTouchingWall(int direction) => Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left, _playerHalfWidth, tileLayer);
 
     private float CheckDashDistance(int direction)
     {
-        var hitWall = Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left, dashDistance, LayerMask.GetMask("Tile"));
-
+        var hitWall = Physics2D.Raycast(transform.position, direction == 1 ? Vector2.right : Vector2.left, dashDistance, tileLayer);
         if (hitWall && hitWall.distance > 0) return dashDistance - hitWall.distance;
-
         return 0;
     }
     
@@ -243,22 +287,32 @@ public class PlayerScript : MonoBehaviour
         _dashTime = dashDuration;
     }
 
+    private void StartSlidingEffect()
+    {
+        slideGrindArm.Clear();
+        slideGrindLeg.Clear();
+            
+        slideGrindArm.Play();
+        slideGrindLeg.Play();
+    }
+
+    private void StopSlidingEffect()
+    {
+        slideGrindArm.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        slideGrindLeg.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
     private void PlayerAnimationController()
     {
         PlayerRunAnimation?.Invoke(Mathf.Abs(_rigidBody2D.linearVelocityX));
-        PlayerJumpAnimation?.Invoke(_rigidBody2D.linearVelocityY > 0.1f);
-        PlayerFallAnimation?.Invoke(_rigidBody2D.linearVelocityY < -0.1f);
+        PlayerJumpAnimation?.Invoke(_rigidBody2D.linearVelocityY > 0.1f && !_isGrabbingTheWall);
+        PlayerFallAnimation?.Invoke(_rigidBody2D.linearVelocityY < -0.1f && !_isGrabbingTheWall);
         PlayerDashAnimation?.Invoke(_dashTime > 0);
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.layer == LayerMask.GetMask("Ledge"))
-        {
-            _canJumpFromWall = true;
-        }
-        
-        if (IsTouchingGround() || IsTouchingWall(_rigidBody2D.linearVelocityX >= 0 ? 1 : -1))
+        if (IsTouchingGround())
         {
             _rigidBody2D.linearDamping = dampingForce;
         }
@@ -266,6 +320,7 @@ public class PlayerScript : MonoBehaviour
         if (collision.gameObject.CompareTag("Kill") && !isInvincible)
         {
             // trigger death animation and show death screen
+            PlayerWallGrabAnimation?.Invoke(false);
             PlayerDeathAnimation?.Invoke();
             deathUI.SetActive(true);
             TurretFireControl?.Invoke();
@@ -273,12 +328,28 @@ public class PlayerScript : MonoBehaviour
             MovementControllerScript.PlayerIsDead = true;
         }
     }
-    
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        if ((collision.gameObject.CompareTag("Ground") || collision.gameObject.CompareTag("Door")) && IsTouchingGround() && _isGrabbingTheWall)
+        {
+            StopSlidingEffect();
+            PlayerWallGrabAnimation?.Invoke(false);
+            _isGrabbingTheWall = false;
+        }
+    }
+
     private void OnCollisionExit2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Ground"))
+        if (collision.gameObject.CompareTag("Ground") || collision.gameObject.CompareTag("Door"))
         {
             _rigidBody2D.linearDamping = 0;
+            if (_isGrabbingTheWall)
+            {
+                _isGrabbingTheWall = false;
+                StopSlidingEffect();
+                PlayerWallGrabAnimation?.Invoke(false);
+            }
         }
     }
 

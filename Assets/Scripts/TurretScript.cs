@@ -24,11 +24,13 @@ public class TurretScript : MonoBehaviour
     private void OnEnable()
     {
         PlayerScript.TurretFireControl += HandleTurretFireControls;
+        InputScript.TurretFireControl += HandleTurretFireControls;
     }
 
     private void OnDisable()
     {
         PlayerScript.TurretFireControl -= HandleTurretFireControls;
+        InputScript.TurretFireControl += HandleTurretFireControls;
     }
 
     private void Start()
@@ -120,5 +122,4 @@ public class TurretScript : MonoBehaviour
         keepShooting = !keepShooting;
         return keepShooting;
     }
-
 }

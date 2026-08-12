@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/Scenes/Menu.unity
     guid: 6294081aabe3c4956a31df8473b3ff05
   - enabled: 1
+    path: Assets/Scenes/SelectLevelMenu.unity
+    guid: a5bffcdbb0d5746e0a7d60ce7eed1bfe
+  - enabled: 1
     path: Assets/Scenes/IntroductionScene.unity
     guid: d2ff62d5315b94f279bc2a59352fba52
   - enabled: 1
@@ -23,6 +26,18 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Area1Level4.unity
     guid: ec62ff2f8f6664ee58eba3c874fd5f98
+  - enabled: 1
+    path: Assets/Scenes/Area1Level5.unity
+    guid: ab60c39d60c1b459da351138542b3f83
+  - enabled: 1
+    path: Assets/Scenes/Area1Level6.unity
+    guid: 65cd21c4208d44b8c8ac6ca0c4c06680
+  - enabled: 1
+    path: Assets/Scenes/QueryConstructionMenu.unity
+    guid: aa539ea18e578464fada13334ccd671b
   m_configObjects:
+    com.unity.adaptivePerformance.basic.provider_settings: {fileID: 11400000, guid: 97bbe699c9f1c4c4d8d4a1bf4689417e, type: 2}
+    com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: e7586a8181cc84d9c8a115e35dfaabdc, type: 2}
+    com.unity.adaptiveperformance.simulator.provider_settings: {fileID: 11400000, guid: d4d27c06c33e44630bc043fa564818c8, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -5,27 +5,25 @@ using UnityEngine.SceneManagement;
 public class TriggerDetectionScript : MonoBehaviour
 {
     [SerializeField] private GameObject fKeyInput;
-
+    public static bool IsAllowedToNextLevel { get; set; } = true;
+    
     private void Awake()
     {
         fKeyInput.SetActive(false);
     }
-
+    
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
-        {
-            // These need to be changed when adding or removing scenes
-            if (gameObject.name == "PlayerSpawnPoint" && SceneManager.GetActiveScene().buildIndex - 1 < 1) return;
-            if (gameObject.name == "PlayerNextLevelTrigger" && SceneManager.GetActiveScene().buildIndex + 1 > 5) return;
-            
-            fKeyInput.SetActive(true);
-        }
+        if (!other.gameObject.CompareTag("Player")) return;
+        // These need to be changed when adding or removing scenes
+        if (!IsAllowedToNextLevel || (SceneManager.GetActiveScene().buildIndex + 1 > 9 && !InputScript.IsSelectedLevel)) return;
+
+        fKeyInput.SetActive(true);
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
+        if (other.gameObject.CompareTag("Player"))
         {
             fKeyInput.SetActive(false);
         }

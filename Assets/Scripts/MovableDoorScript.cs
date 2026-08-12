@@ -24,12 +24,12 @@ public class MovableDoorScript : MonoBehaviour
 
     private void OnEnable()
     {
-        ItemScript.OpenDoorOnPickUp += HandleDoorOpening;
+        DoorKeyScript.OpenDoorOnPickUp += HandleDoorOpening;
     }
 
     private void OnDisable()
     {
-        ItemScript.OpenDoorOnPickUp -= HandleDoorOpening;
+        DoorKeyScript.OpenDoorOnPickUp -= HandleDoorOpening;
     }
 
     private void Update()

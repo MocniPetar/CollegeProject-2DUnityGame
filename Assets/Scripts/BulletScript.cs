@@ -49,7 +49,6 @@ public class BulletScript : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D other)
     {
-        Debug.Log("Hit a tile");
         if (explosionParticleEffect != null)
         {
             explosionParticleEffect.transform.SetParent(null);

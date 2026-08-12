@@ -97,10 +97,10 @@ public class AnimationControllerScript : MonoBehaviour
     {
         dashAnimator?.SetBool(DashAnimationShow, true);
         
-        yield return new WaitForSeconds((float)(dashCooldown - dashCooldown*0.2));
+        yield return new WaitForSeconds((float)(dashCooldown - dashCooldown*0.1));
 
         dashAnimator?.SetTrigger(DashIsEmpty);
-        yield return new WaitForSeconds((float)(dashCooldown*0.2));
+        yield return new WaitForSeconds((float)(dashCooldown*0.1));
         
         dashAnimator?.SetBool(DashAnimationShow, false);
     }
